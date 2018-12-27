@@ -29,11 +29,9 @@ object Boot extends App {
   flyway.setDataSource(url, conf.getString("db.user"), conf.getString("db.password"))
   flyway.migrate()
 
-
-  // we need an ActorSystem to host our application in
   implicit val system = ActorSystem("on-spray-can")
 
-  // create and start our service actor
+  // create and start our service based on akka actor models that contains all endpoints for our project
   val service = system.actorOf(Props[SprayActor], "paytest-service")
 
   implicit val timeout = Timeout(5.seconds)
@@ -41,6 +39,4 @@ object Boot extends App {
 
   // start a new HTTP server on port 8080 with our service actor as the handler
   IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = port)
-
-  //finally db.close
 }

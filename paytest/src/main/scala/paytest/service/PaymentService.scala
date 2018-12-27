@@ -73,12 +73,15 @@ object PaymentService {
   }
 
   /**
-    * Take a list of payments and get all the foreing keys for all itemns
-    * on a single wait, then populate the variables and return the list of payments
+    * Take a list of payments and get all the foreing keys for all items,
+    * then populate the variables and return the list of payments
     * @param allPayments list of payments
     * @return list of payments with filled foreign keys as variables
     */
   def populatePayments(allPayments: Seq[Payment]): Seq[Payment] = {
+
+    //we could keep optimizing this call to allow all queries to use joins
+    //to make it faster, but that might require a native sql on slick.
     val foreignQueries=  allPayments.map( payment => {
       for {
         beneficiary <- AccountService.get(payment.beneficiaryId)
@@ -91,8 +94,10 @@ object PaymentService {
       )
     })
 
+    // convert Seq[Future] into a Future[Seq] so we can only wait once for all the queries to finish
     val futureOfList = Future.sequence(foreignQueries)
 
+    // Wait for all queries to finish on a single wait
     val foreignObjects = Await.result(futureOfList, Duration.Inf)
     val accountMapping = foreignObjects reduce (_ ++ _)
 

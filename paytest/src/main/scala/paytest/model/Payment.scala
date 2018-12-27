@@ -58,7 +58,9 @@ class Payments(tag: Tag) extends Table[Payment](tag, "payment") {
   def debtorId = column[String]("debtor_id")
   def debtor = foreignKey("debtor_fk", debtorId, accounts)(_.id, onUpdate=ForeignKeyAction.SetNull, onDelete=ForeignKeyAction.SetNull)
 
-  // Fx is a class inside payment, we do it this way to avoid the 22 max field limit on Slick
+  // Fx is a separate class inside payment, we do it this way mainly to avoid the 22 max field limit on Slick
+  // all fields in Fx class will be part of the Payment table in sql,
+  // but we deal with this object as a separate class inside payment
   val fxProjection = fx <> (Fx.tupled, Fx.unapply)
 
   def * = (id.?, amount, currency, bearerCode, senderCharges,

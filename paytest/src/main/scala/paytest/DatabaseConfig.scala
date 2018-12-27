@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory
 import slick.driver.{H2Driver, JdbcProfile, PostgresDriver}
 import slick.jdbc.JdbcBackend._
 
-//Based on play-slick driver loader
 object DatabaseConfig {
   private val logger = LoggerFactory.getLogger(this.getClass)
 

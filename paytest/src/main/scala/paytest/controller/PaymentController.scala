@@ -56,7 +56,6 @@ trait PaymentController extends HttpService with DefaultJsonProtocol with SprayJ
             case Success(Some(newPayment)) => complete(Created,newPayment)
             case Success(None) => complete(NotAcceptable, "Invalid payment")
             case Failure(ex) => {
-              //logger.error(s"Unable to create payment via post ${payment}: $ex")
               complete(BadRequest, s"An error occurred: ${ex.getMessage}")
             }
 

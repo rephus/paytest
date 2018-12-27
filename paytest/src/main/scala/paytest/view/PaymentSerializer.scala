@@ -15,7 +15,10 @@ object PaymentJsonProtocol extends DefaultJsonProtocol {
     }
   }
 
-  //implicit val fxFormat = jsonFormat4(Fx)
+  // This is another quick alternative to create automnatic one-liner json formats for all the classes
+  // however, it doesn't match our schema, as fields are returned on CamelCase (instead of snake_case json standard)
+  // and doesn't contain foreign keys on payments
+
   //implicit val paymentFormat = jsonFormat21(Payment)
 
   implicit object AccountFormat extends RootJsonFormat[Account] {

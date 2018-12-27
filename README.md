@@ -33,6 +33,20 @@ Extra endpoints for monitoring, useful when implementing a complex microservice 
 - Added pagination (limit, from filters) on list of payments endpoint
 - Comprehensive test coverage on tests, DB methods, API and serializers
 
+### Project structure
+This is the structure of the modules in the project, it follows the model-view-controller pattern.
+
+- src/main/resources/db : Folder with all migrations tu run with Flyway
+- src/main/resources/application.conf: Configuration file for the server
+- src/main/scala/paytest: Where the code of the app is 
+    - Boot: App entrypoint, we run DB migrations and initialize the Spray REST API service
+    - controller: contains the endpoints, and their actions, response serialization happens implicitly
+    - model: contains the classes and the DB mapping
+    - view: contains the JSON serializers
+    - service: contains the DB acctions (insert, select, update, delete...)
+
+All tests are inside src/test/scala/paytest, following a similar model-view-controller structure. There is also another application.conf file with the H2 database details only for tests. 
+
 ## Implementation comments
 
 This is the list of this that I did or didn't do, most of them don't provide any value to the showcase of this project, but they are used to simplify the implementation. 
@@ -64,9 +78,11 @@ This is a list of this that should be done before moving to a full environment.
 ![](test.gif)
 
 Run all test
+
     ./sbt ~test 
 
 Run a particular test (regex) 
+
     ./sbt '~test-only *Serializer*' 
 
 Or use docker instead 
@@ -80,9 +96,11 @@ Before running the server, you will need to be running a postgres instance with 
     docker-compose up postgres 
 
 Run with docker 
+
     docker-compose up paytest
 
 Or use sbt
+
     ./sbt run 
 
 Or use the already built java jar (sbt assembly)
