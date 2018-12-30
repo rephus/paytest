@@ -96,6 +96,7 @@ class PaymentControllerTest extends Specification with Specs2RouteTest with Paym
         Await.result(payment, Duration.Inf) === None
       }
     }
+
     "create a payment via POST" in {
       //copy the same foreign keys as the previous random payment
       val newPayment = PaymentTest.random.copy(
@@ -150,6 +151,12 @@ class PaymentControllerTest extends Specification with Specs2RouteTest with Paym
         val payment = db.run(payments.filter(_.id === paymentId).result.headOption)
         Await.result(payment, Duration.Inf).get.reference === "new reference"
 
+      }
+    }
+
+    "Updating an invalid payment id via PUT should return an error" in {
+      Put(s"/payment/not-valid", randomPayment) ~> paymentRoutes ~> check {
+        status mustEqual StatusCodes.NotAcceptable
       }
     }
 
