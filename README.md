@@ -45,7 +45,8 @@ This is the structure of the modules in the project, it follows the model-view-c
     - view: contains the JSON serializers
     - service: contains the DB acctions (insert, select, update, delete...)
 
-All tests are inside src/test/scala/paytest, following a similar model-view-controller structure. There is also another application.conf file with the H2 database details only for tests. 
+All tests are inside src/test/scala/paytest, following a similar model-view-controller structure. There is also another application.conf file with the H2 database details only for tests.
+Plus, there is an additional `factory` pakcage for generating random objects (Account and Payment) with filled fields 
 
 ## Implementation comments
 
@@ -79,13 +80,14 @@ This is a list of this that should be done before moving to a full environment.
 
 Run all test
 
-    ./sbt ~test 
+    ./sbt test 
 
 Run a particular test (regex) 
 
-    ./sbt '~test-only *Serializer*' 
+    ./sbt 'test-only *Serializer*' 
 
 Or use docker instead 
+
     docker-compose run paytest bash -c "./sbt test"
 
 ## Run the server 
@@ -93,19 +95,19 @@ Or use docker instead
 ![](run.gif)
 
 Before running the server, you will need to be running a postgres instance with a *paytest* database, you can run it on your machine using docker with 
+
     docker-compose up postgres 
 
 Run with docker 
 
     docker-compose up paytest
 
-Or use sbt
-
-    ./sbt run 
-
 Or use the already built java jar (sbt assembly)
 
-    java -jar app.jar
+    java -jar server.jar
+    
+You could also use `./sbt run` but you need to change the application.conf to use postgres on localhost
+
 
 ![](run-jar.gif)
 

@@ -5,18 +5,21 @@ import spray.testkit.Specs2RouteTest
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import org.specs2.mutable.{Specification}
+import org.specs2.mutable.Specification
 import paytest.DatabaseConfig
+import paytest.factory.PaymentFactory
 import paytest.model._
-import paytest.model.PaymentTest.{createSchema, insert}
+import paytest.model.PaymentTest.{createSchema, insertPaymentAndAccounts}
 import slick.driver.H2Driver.api._
 import paytest.view.PaymentJsonProtocol._
 import spray.http.StatusCodes
+import spray.json._
 
 class PaymentControllerTest extends Specification with Specs2RouteTest with PaymentController {
+  // method actorRefFactory in trait HttpService of type => akka.actor.ActorRefFactoryç
   def actorRefFactory = system
 
-  val randomPayment = PaymentTest.random
+  val randomPayment = PaymentFactory.random
 
   lazy val db = DatabaseConfig.db
 
@@ -26,12 +29,12 @@ class PaymentControllerTest extends Specification with Specs2RouteTest with Paym
 
   val dbInitialized = for {
     _ <- createSchema(db)
-    dbInitialized <- insert(db, randomPayment)
+    dbInitialized <- insertPaymentAndAccounts(db, randomPayment)
   } yield dbInitialized
 
   Await.result(dbInitialized, Duration.Inf)
 
-  "Payment controller Tests" should {
+  "Payment controller" should {
 
     "return list of payments" in {
       val allQuery = db.run(payments.result)
@@ -78,7 +81,7 @@ class PaymentControllerTest extends Specification with Specs2RouteTest with Paym
     "delete a payment" in {
       val paymentToDelete = PaymentTest.random
 
-      val ins = insert(db, paymentToDelete)
+      val ins = insertPaymentAndAccounts(db, paymentToDelete)
       Await.result(ins, Duration.Inf)
 
       // Check that it does exist before deletion
@@ -107,16 +110,25 @@ class PaymentControllerTest extends Specification with Specs2RouteTest with Paym
         val newPaymentId = responseAs[Payment].id.get
         val payment = db.run(payments.filter(_.id === newPaymentId).result.headOption)
         Await.result(payment, Duration.Inf).get.amount === newPayment.amount
+        // check beneficiary foreign key
 
+        val resultJson = responseAs[String].parseJson
+        val account = resultJson.asJsObject.getFields("beneficiary").head.asJsObject.convertTo[Account]
+        account.id.get === newPayment.beneficiaryId
       }
     }
 
-    "invalid payment with missing foreign keys should return an error" in {
-      val newPayment = PaymentTest.random.copy(id = None)
+    "invalid payment with invalid foreign keys should return an error" in {
+      val newPayment = PaymentTest.random.copy(id = None,
+        beneficiaryId = "not-valid-id",
+        sponsorId = "not-valid-id",
+        debtorId = "not-valid-id")
       Post("/payment", newPayment) ~> paymentRoutes ~> check {
         status mustEqual StatusCodes.BadRequest
         val result = responseAs[String]
-        responseAs[String] must contain("FOREIGN KEY")
+        // We check that the response is returning a related error code (foreign key)
+        // In the future, we should replace this with a proper code error (instead of returning the internal sql error)
+        responseAs[String] must contain("Referential integrity constraint violation")
       }
     }
 

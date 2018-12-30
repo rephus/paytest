@@ -1,38 +1,20 @@
 package paytest.model
 
-import java.util.UUID
 
 import org.specs2.mutable.{After, Before, BeforeAfter, Specification}
 import slick.driver.H2Driver.api._
 import slick.jdbc.meta._
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Random, Success}
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
-import AccountTest._
 import paytest.DatabaseConfig
+import paytest.factory._
 
-object AccountTest {
-  def randomString = Random.alphanumeric.take(Random.nextInt(10)).mkString
-
-  def random: Account = {
-    Account(
-      id = Some(UUID.randomUUID().toString),
-      accountName = randomString,
-      accountNumber = BigDecimal.apply(Random.nextInt),
-      numberCode = randomString,
-      accountType = Random.nextInt,
-      address = randomString,
-      bankId= Random.nextInt,
-      bankIdCode = randomString,
-      name = randomString
-    )
-  }
-}
 class AccountTest extends Specification {
 
   val table = TableQuery[Accounts]
+  val random = AccountFactory.random
 
   trait Context extends After {
     val dbName = s"test${util.Random.nextInt}"
@@ -70,7 +52,7 @@ class AccountTest extends Specification {
       insertCount <- db.run(table += random)
     } yield insertCount
 
-    Await.result(insertCount, Duration.Inf) must beEqualTo(1)
+    Await.result(insertCount, Duration.Inf) === 1
   }
 
   "Querying account table works" >> new Context {
@@ -82,9 +64,9 @@ class AccountTest extends Specification {
     } yield res
 
     val results = Await.result(resultsFuture, Duration.Inf)
-    results.size must beEqualTo(1)
-    results.head.id must beEqualTo(account.id)
-    results.head.accountName must beEqualTo(account.accountName)
+    results.size === 1
+    results.head.id === account.id
+    results.head.accountName === account.accountName
     results.head === account
   }
 }

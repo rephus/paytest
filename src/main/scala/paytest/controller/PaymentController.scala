@@ -53,7 +53,10 @@ trait PaymentController extends HttpService with DefaultJsonProtocol with SprayJ
       entity(as[Payment]) { payment =>
         respondWithMediaType(`application/json`) {
           onComplete(PaymentService.add(payment)) {
-            case Success(Some(newPayment)) => complete(Created,newPayment)
+            case Success(Some(newPayment)) => {
+              val paymentWithAccount = PaymentService.populatePayment(newPayment)
+              complete(Created,paymentWithAccount)
+            }
             case Success(None) => complete(NotAcceptable, "Invalid payment")
             case Failure(ex) => {
               complete(BadRequest, s"An error occurred: ${ex.getMessage}")
@@ -69,7 +72,10 @@ trait PaymentController extends HttpService with DefaultJsonProtocol with SprayJ
       entity(as[Payment]) { payment =>
         respondWithMediaType(`application/json`) {
           onComplete(PaymentService.update(paymentId, payment)) {
-            case Success(Some(payment)) => complete(OK, payment)
+            case Success(Some(updatedPayment)) => {
+              val paymentWithAccount = PaymentService.populatePayment(updatedPayment)
+              complete(OK, paymentWithAccount)
+            }
             case Success(None) => complete(NotAcceptable, "Invalid payment")
             case Failure(ex) =>  complete(BadRequest, s"An error occurred: ${ex.getMessage}")
           }

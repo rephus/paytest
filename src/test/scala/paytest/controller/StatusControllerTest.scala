@@ -8,7 +8,7 @@ import spray.json._
 class StatusControllerTest extends Specification with Specs2RouteTest with StatusController {
   def actorRefFactory = system
 
-  "Status controller Tests" should {
+  "Status controller" should {
 
     "return ping" in {
       Get(s"/ping") ~> statusRoutes ~> check {

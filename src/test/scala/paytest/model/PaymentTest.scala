@@ -12,60 +12,29 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.util.Random
 import PaymentTest._
+import paytest.factory._
 
 object PaymentTest {
 
-  def randomCurrency = Random.shuffle(List("GBP", "EUR", "USD")).head
-  def randomString = Random.alphanumeric.take(Random.nextInt(10)).mkString
-
-  def random: Payment = {
-    Payment(
-      id = Some(UUID.randomUUID().toString),
-      amount = Random.nextFloat,
-      currency = randomCurrency,
-      bearerCode = randomString,
-      senderCharges = s"${Random.nextFloat} $randomCurrency;${Random.nextFloat} $randomCurrency"  ,
-      receiverChargesAmount = Random.nextFloat,
-      receiverChargesCurrency =  randomCurrency,
-      endToEndReference = randomString,
-      numericReference = Random.nextInt(),
-      paymentId = BigDecimal.apply(Random.nextInt),
-      paymentPurpose = randomString,
-      paymentScheme = randomString,
-      paymentType = randomString,
-      processingDate = Date.valueOf("2018-01-01"),
-      reference = randomString,
-      schemePaymentSubtype = randomString,
-      schemePaymentType = randomString,
-      //fx
-      fx=Fx(
-        contractReference= randomString,
-        exchangeRate= Random.nextFloat,
-        originalAmount= Random.nextFloat,
-        originalCurrency= randomString),
-      beneficiaryId= UUID.randomUUID().toString,
-      sponsorId= UUID.randomUUID().toString,
-      debtorId= UUID.randomUUID().toString)
-  }
   val table = TableQuery[Payments]
+  val random = PaymentFactory.random
 
   def createSchema(db: Database) = {
     //required for foreign keys
     for {
       _ <- db.run(TableQuery[Accounts].schema.create)
-
       res <- db.run(table.schema.create)
     } yield res
   }
 
-  def insert(db: Database, payment: Payment) = {
+  def insertPaymentAndAccounts(db: Database, payment: Payment) = {
     //INsert payment and all foreign keys
     val accounts = TableQuery[Accounts]
     for {
       // Add foreign keys
-      _ <- db.run(accounts += AccountTest.random.copy(id = Some(payment.beneficiaryId)))
-      _ <- db.run(accounts += AccountTest.random.copy(id = Some(payment.sponsorId)))
-      _ <- db.run(accounts += AccountTest.random.copy(id = Some(payment.debtorId)))
+      _ <- db.run(accounts += AccountFactory.random.copy(id = Some(payment.beneficiaryId)))
+      _ <- db.run(accounts += AccountFactory.random.copy(id = Some(payment.sponsorId)))
+      _ <- db.run(accounts += AccountFactory.random.copy(id = Some(payment.debtorId)))
 
       res <-  db.run(table += payment)
     } yield res
@@ -86,7 +55,7 @@ class PaymentTest extends Specification {
       _ <- createSchema(db)
       numberOfTables <- db.run(MTable.getTables).map(_.size)
     } yield numberOfTables
-    Await.result(numberOfTables, Duration.Inf) mustEqual (2)
+    Await.result(numberOfTables, Duration.Inf) === 2
   }
 
   "Schema should match our specification" >> new Context {
@@ -123,55 +92,64 @@ class PaymentTest extends Specification {
   }
 
   "Inserting an payment works" >> new Context {
-    val insertCount = for {
+    val payment = random
+    val resultsFuture = for {
       _ <- createSchema(db)
-      insertCount <- insert(db, random)
-    } yield insertCount
+      _ <-  insertPaymentAndAccounts(db, payment)
+      res <- db.run(table.result)
+    } yield res
 
-    Await.result(insertCount, Duration.apply(5, "second")) must beEqualTo(1)
+    val results = Await.result(resultsFuture, Duration.Inf)
+    results.size === 1
+
+    val inserted = results.head
+    inserted.id === payment.id
+    inserted.amount === payment.amount
+    inserted.currency === payment.currency
+
   }
 
   "Querying payment table works" >> new Context {
     val payment = random
     val resultsFuture = for {
       _ <- createSchema(db)
-      _ <-  insert(db, payment)
+      _ <-  insertPaymentAndAccounts(db, payment)
       res <- db.run(table.result)
     } yield res
 
     val results = Await.result(resultsFuture, Duration.Inf)
-    results.size must beEqualTo(1)
-    results.head.id must beEqualTo(payment.id)
-    results.head.endToEndReference must beEqualTo(payment.endToEndReference)
+    results.size === 1
+    results.head.id === payment.id
+    results.head.endToEndReference === payment.endToEndReference
     results.head === payment
   }
 
-  "Check payment foreign FX" >> new Context {
+  "Payment should have FX" >> new Context {
     val payment = random
     val resultsFuture = for {
       _ <- createSchema(db)
-      _ <-  insert(db, payment)
+      _ <-  insertPaymentAndAccounts(db, payment)
       res <- db.run(table.result)
     } yield res
 
     val results = Await.result(resultsFuture, Duration.Inf)
-    results.size must beEqualTo(1)
-    results.head.id must beEqualTo(payment.id)
+    results.size === 1
+    results.head.id === payment.id
     results.head.fx.contractReference === payment.fx.contractReference
     results.head.fx === payment.fx
   }
-  "Check payment foreign keys" >> new Context {
+  "Payment should have foreign keys" >> new Context {
     val payment = random
     val resultsFuture = for {
       _ <- createSchema(db)
-      _ <-  insert(db, payment)
+      _ <-  insertPaymentAndAccounts(db, payment)
       res <- db.run(table.result)
     } yield res
 
     val results = Await.result(resultsFuture, Duration.Inf)
-    results.size must beEqualTo(1)
-    results.head.id must beEqualTo(payment.id)
-    results.head.endToEndReference must beEqualTo(payment.endToEndReference)
+    results.size === 1
+    results.head.id === payment.id
+    results.head.endToEndReference === payment.endToEndReference
     results.head.beneficiaryId === payment.beneficiaryId
 
     val accounts = TableQuery[Accounts]
